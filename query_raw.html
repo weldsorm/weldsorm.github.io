@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Migration - The Welds Book</title>
+        <title>Raw SQL - The Welds Book</title>
 
 
         <!-- Custom HTML head -->
@@ -152,139 +152,130 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="migrations"><a class="header" href="#migrations">Migrations</a></h1>
-<p>Welds has built in migrations that offer a couple nice benefits SQL script style migrations do not.</p>
-<ol>
-<li>You can write them once and they work with all backends</li>
-<li>Welds migrations are database aware, so they automatically generate down migrations.</li>
-<li>You can always fallback to raw SQL style migrations with the <code>Manual</code> migrations struct.</li>
-</ol>
-<p>To use migrations make sure the migrations feature flag is enabled.</p>
-<pre><code class="language-bash">cargo add welds --feature=migrations
-</code></pre>
-<h2 id="common-setup--layout"><a class="header" href="#common-setup--layout">Common Setup / layout</a></h2>
-<p>Feel free to layout migrations in your project how you see fit, but if you are looking for a simple starting place:</p>
-<ol>
-<li>make a migrations module <code>src/migrations/mod.rs</code></li>
-<li>add an <code>up</code> style function to run all your migrations. migrations that have already executed will be skipped.</li>
-</ol>
+                        <h1 id="raw-sql"><a class="header" href="#raw-sql">Raw SQL</a></h1>
+<p>Welds has the mindset that you should be able to drop down to SQL if you need it.
+We provide several ways to use SQL snipits in your queries, but this chapter is how to bypass the QueryBuilder altogether.</p>
+<p>Your <code>client</code> from when you connected has everything on it that you could need.
+Most likely you have connected with a generic <code>AnyClient</code> connection. <code>AnyClient</code>
+and the four specific variants all implement the two traits <code>welds_connections::Client</code> and <code>welds_connections::TransactStart</code>.
+These two trans are the common way to tall to any database.</p>
+<br/>
+<p>It should be noted while the interface is common between the different database backends, the database backend all expect their own slightly different flavor of SQL.
+If you are writing raw SQL, you will need to write it for all the backends you would like to support.</p>
+<h2 id="execute"><a class="header" href="#execute">execute</a></h2>
+<p>If you aren't expecting to get any data back from the database, <code>execute</code> is what you are looking for.
+You pass in raw SQL with SQL parameters, and the database runs it for you.</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>/*  ./src/migrations/mod.rs  */
+</span>    use welds::prelude::*;
+    let client = welds::connections::connect(connection_string).await?;
+    let text: String = "I'm a String".to_owned();
+    client.execute("select ?, ?", &amp;[&amp;2, &amp;text]).await?;
+<span class="boring">}</span></code></pre></pre>
+<p>There are a couple things worth pointing out in this example.</p>
+<ol>
+<li>Make sure you are including the <code>prelude</code>. It includes the traits you need</li>
+<li>Those parameters are a little crazy looking. Are They mixing types?</li>
+</ol>
+<p>The parameters are actually just a slice of borrowed <code>dyn Param</code> (can be sent to database).
+This is why all parts of it are borrowed <code>&amp;</code>.</p>
+<p>A much more verbose way of writing this might look like this.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::prelude::*;
+    use welds::connections::Param;
+    let mut params: Vec&lt;&amp;(dyn Param + Sync)&gt; = Vec::default();
+    let text: String = "I'm a String".to_owned();
+    params.push(&amp;2);
+    params.push(&amp;text);
+    client.execute("select ?, ?;", &amp;params).await?;
+<span class="boring">}</span></code></pre></pre>
+<h2 id="fetch_rows-into-model"><a class="header" href="#fetch_rows-into-model">fetch_rows, Into Model</a></h2>
+<p><code>fetch_rows</code> works exactly like <code>execute</code> except it returns a <code>Vec&lt;Row&gt;</code>.
+All welds models impl <code>TryFrom&lt;Row&gt;</code>.
+This allows you to read out raw values from each row or map them into a <code>WeldsModel</code>.</p>
+<p>The welds model</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(WeldsModel)]
+struct Car {
+    id: i32,
+}
+<span class="boring">}</span></code></pre></pre>
+<p>Running the raw SQL and mapping into your struct</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::prelude::*;
+    let client = welds::connections::connect(connection_string).await?;
+    let rows = client.execute("select id from cars", &amp;[]).await?;
+    let cars: Vec&lt;Car&gt; = rows.collect_into()?;
+<span class="boring">}</span></code></pre></pre>
+<p>There are a couple things to note about this example.</p>
+<ol>
+<li>The mapping into the model is done by <em><strong>column name</strong></em>.
+Make sure the field name on your model matches what is being selected.</li>
+<li><code>collect_into()</code> is a helper method extension added to <code>Vec&lt;Row&gt;</code></li>
+</ol>
+<h2 id="fetch_rows-by-hand"><a class="header" href="#fetch_rows-by-hand">fetch_rows, By Hand</a></h2>
+<p>If you are just reading a single value like a count or total, it might be easier to avoid a welds model.
+Here are two examples that read a value directly from a row.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::prelude::*;
+    let rows = client.fetch_rows("select 1 + 1 as total;", &amp;[]).await?;
+    let first_row = rows.first().unwrap();
+    let total: i32 = first_row.get("total")?;
+    println!("Total: {total}");
+<span class="boring">}</span></code></pre></pre>
+<p>You can read values by position in the row with <code>get_by_position</code>.
+Note it is zero based.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::prelude::*;
+    let rows = client.fetch_rows("select 1 + 2;", &amp;[]).await?;
+    let first_row = rows.first().unwrap();
+    let total: i32 = first_row.get_by_position(0)?;
+    println!("Total: {total}");
+<span class="boring">}</span></code></pre></pre>
+<h2 id="fetch-many"><a class="header" href="#fetch-many">Fetch Many</a></h2>
+<p>Last we have one more function that is used by welds internally for optimizations and you can use it too if you wish.
+<code>fetch_many</code> takes in a slice of <code>welds_connections::Fetch</code> (pairs of sql and params).</p>
+<p>This is specifically useful when you want to force multiple database calls onto the same connection in a database pool.
+There are a couple niche use cases you might want to do this, but most likely <code>fetch_rows</code> is what you want.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::prelude::*;
+    use welds::connections::Fetch;
 
-use welds::errors::Result;
-use welds::migrations::prelude::*;
-
-pub async fn up(client: &amp;dyn welds::TransactStart) -&gt; Result&lt;()&gt; {
-    let list: Vec&lt;MigrationFn&gt; = vec![
-        m20250210064356_create_table_dogs::step,
+    let fetches = vec![
+        Fetch {
+            sql: "select 1",
+            params: &amp;[],
+        },
+        Fetch {
+            sql: "select 2",
+            params: &amp;[],
+        },
     ];
-    welds::migrations::up(client, list.as_slice()).await?;
-    Ok(())
-}
 
-mod m20250210064356_create_table_dogs;
-<span class="boring">}</span></code></pre></pre>
-<ol start="3">
-<li>keep adding your migrations as sub-modules as you need them.</li>
-<li>call <code>crate::migrations::up(&amp;client).await?;</code> when your app boots.</li>
-</ol>
-<h2 id="types"><a class="header" href="#types">Types</a></h2>
-<p><code>welds::migrations::Types</code> is an Enum of generic sounding types that welds knows how to translate into Rust code and each database backend.
-Stick to these types if you can. Sometimes you have an odd SQL Type you need to work with.
-You can do so with <code>Types::Raw(XXX)</code>. This variant allows full control of what type is used in SQL.</p>
-<h2 id="create-table"><a class="header" href="#create-table">Create Table</a></h2>
-<p><code>create_table</code> is a function to generate a migration to create a table.
-It is a build pattern style call.
-Inside each call to column lambda is a nested build pattern style call for each column.</p>
-<p>A vary plain example might look like this.</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use welds::errors::Result;
-use welds::migrations::prelude::*;
+    let groups_of_rows = client.fetch_many(&amp;fetches).await?;
+    for rows in groups_of_rows {
+        // work with each individual set of rows
+    }
 
-pub(super) fn step(_state: &amp;TableState) -&gt; Result&lt;MigrationStep&gt; {
-    let m = create_table("dogs")
-        .id(|c| c("id", Type::IntBig))
-        .column(|c| c("name", Type::String))
-        .column(|c| c("wags", Type::Int));
-    Ok(MigrationStep::new("m20250210064356_create_table_dogs", m))
-}
-<span class="boring">}</span></code></pre></pre>
-<p>By default all columns are not null. We can change this by adding onto the columns lambda call.</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>    let m = create_table("dogs")
-        .id(|c| c("id", Type::IntBig))
-        .column(|c| c("name", Type::String).is_null())
-        .column(|c| c("wags", Type::Int));
-}
-<span class="boring">}</span></code></pre></pre>
-<p>Notable column settings:</p>
-<ul>
-<li><em><strong>is_null()</strong></em> sets the column as nullable</li>
-<li><em><strong>with_index()</strong></em> adds an index to the column</li>
-<li><em><strong>with_index_name(&amp;str)</strong></em> adds an index to the column, with a name that you provide</li>
-<li><em><strong>with_unique_index()</strong></em> Adds a unique constraint on this column</li>
-<li><em><strong>create_foreign_key(_,_,_)</strong></em> Adds a foreign key (foreign_table, foreign_column, delete_behavior)</li>
-</ul>
-<h2 id="alter-table---alter-columns---delete-table"><a class="header" href="#alter-table---alter-columns---delete-table">Alter Table - Alter Columns - Delete Table</a></h2>
-<p>Modifications to tables including table drops are accessible from a call to <code>change_table</code>.</p>
-<h3 id="dropping-a-table"><a class="header" href="#dropping-a-table">Dropping a table</a></h3>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>fn step(state: &amp;TableState) -&gt; Result&lt;MigrationStep&gt; {
-    let m = change_table(state, "dogs")?.drop();
-    Ok(MigrationStep::new("m20250210064357_drop_table_dogs", m))
-}
-<span class="boring">}</span></code></pre></pre>
-<h3 id="add-column"><a class="header" href="#add-column">Add Column</a></h3>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>fn step(state: &amp;TableState) -&gt; Result&lt;MigrationStep&gt; {
-    let alter = change_table(state, "dogs")?;
-    let m = alter.add_column("belly_rubs", Type::Int);
-    Ok(MigrationStep::new("m20250210064357_add_column", m))
-}
-<span class="boring">}</span></code></pre></pre>
-<h3 id="change-a-column"><a class="header" href="#change-a-column">Change a column</a></h3>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>fn step(state: &amp;TableState) -&gt; Result&lt;MigrationStep&gt; {
-    let alter = change_table(state, "dogs")?;
-    let m = alter.change("belly_rubs")
-        .to_type( Type::IntBig )
-        .null() // make nullable
-        .rename("rubs");
-    Ok(MigrationStep::new("m20250210064357_alter_column", m))
-}
-<span class="boring">}</span></code></pre></pre>
-<h2 id="manual-sql"><a class="header" href="#manual-sql">Manual SQL</a></h2>
-<p>Welds always tries to provide a fallback for a manual option.
-Migrations are no exception.
-You can always write manual raw SQL to make database changes if needed.</p>
-<p>Manual migrations are ran within a transaction and support running multiple commands separated by a semicolon ";"</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use welds::errors::Result;
-use welds::migrations::prelude::*;
-use welds::migrations::Manual;
-
-fn step(state: &amp;TableState) -&gt; Result&lt;MigrationStep&gt; {
-    let m = Manual::up("DROP TABLE dogs")
-        .down("CREATE TABLE dogs ( id SERIAL PRIMARY KEY )");
-    Ok(MigrationStep::new("m20250210064357_manual_dogs", m))
-}
 <span class="boring">}</span></code></pre></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="query_raw.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="query_sql.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
+                            <a rel="next prefetch" href="migration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -292,10 +283,13 @@ fn step(state: &amp;TableState) -&gt; Result&lt;MigrationStep&gt; {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="query_raw.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="query_sql.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
+                    <a rel="next prefetch" href="migration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>

@@ -1031,6 +1031,118 @@ This is useful for comparing multiple columns or more elaborate function calls.<
 <p>The params for where_manual2 are automatically converted from a tuple of whatever size.</p>
 <h2 id="other"><a class="header" href="#other">Other</a></h2>
 <p>There are a couple other <code>*_manual</code> functions in the QueryBuilder with the purpose of allowing small manual SQL snippets in the query.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="raw-sql"><a class="header" href="#raw-sql">Raw SQL</a></h1>
+<p>Welds has the mindset that you should be able to drop down to SQL if you need it.
+We provide several ways to use SQL snipits in your queries, but this chapter is how to bypass the QueryBuilder altogether.</p>
+<p>Your <code>client</code> from when you connected has everything on it that you could need.
+Most likely you have connected with a generic <code>AnyClient</code> connection. <code>AnyClient</code>
+and the four specific variants all implement the two traits <code>welds_connections::Client</code> and <code>welds_connections::TransactStart</code>.
+These two trans are the common way to tall to any database.</p>
+<br/>
+<p>It should be noted while the interface is common between the different database backends, the database backend all expect their own slightly different flavor of SQL.
+If you are writing raw SQL, you will need to write it for all the backends you would like to support.</p>
+<h2 id="execute"><a class="header" href="#execute">execute</a></h2>
+<p>If you aren't expecting to get any data back from the database, <code>execute</code> is what you are looking for.
+You pass in raw SQL with SQL parameters, and the database runs it for you.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::prelude::*;
+    let client = welds::connections::connect(connection_string).await?;
+    let text: String = "I'm a String".to_owned();
+    client.execute("select ?, ?", &amp;[&amp;2, &amp;text]).await?;
+<span class="boring">}</span></code></pre></pre>
+<p>There are a couple things worth pointing out in this example.</p>
+<ol>
+<li>Make sure you are including the <code>prelude</code>. It includes the traits you need</li>
+<li>Those parameters are a little crazy looking. Are They mixing types?</li>
+</ol>
+<p>The parameters are actually just a slice of borrowed <code>dyn Param</code> (can be sent to database).
+This is why all parts of it are borrowed <code>&amp;</code>.</p>
+<p>A much more verbose way of writing this might look like this.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::prelude::*;
+    use welds::connections::Param;
+    let mut params: Vec&lt;&amp;(dyn Param + Sync)&gt; = Vec::default();
+    let text: String = "I'm a String".to_owned();
+    params.push(&amp;2);
+    params.push(&amp;text);
+    client.execute("select ?, ?;", &amp;params).await?;
+<span class="boring">}</span></code></pre></pre>
+<h2 id="fetch_rows-into-model"><a class="header" href="#fetch_rows-into-model">fetch_rows, Into Model</a></h2>
+<p><code>fetch_rows</code> works exactly like <code>execute</code> except it returns a <code>Vec&lt;Row&gt;</code>.
+All welds models impl <code>TryFrom&lt;Row&gt;</code>.
+This allows you to read out raw values from each row or map them into a <code>WeldsModel</code>.</p>
+<p>The welds model</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(WeldsModel)]
+struct Car {
+    id: i32,
+}
+<span class="boring">}</span></code></pre></pre>
+<p>Running the raw SQL and mapping into your struct</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::prelude::*;
+    let client = welds::connections::connect(connection_string).await?;
+    let rows = client.execute("select id from cars", &amp;[]).await?;
+    let cars: Vec&lt;Car&gt; = rows.collect_into()?;
+<span class="boring">}</span></code></pre></pre>
+<p>There are a couple things to note about this example.</p>
+<ol>
+<li>The mapping into the model is done by <em><strong>column name</strong></em>.
+Make sure the field name on your model matches what is being selected.</li>
+<li><code>collect_into()</code> is a helper method extension added to <code>Vec&lt;Row&gt;</code></li>
+</ol>
+<h2 id="fetch_rows-by-hand"><a class="header" href="#fetch_rows-by-hand">fetch_rows, By Hand</a></h2>
+<p>If you are just reading a single value like a count or total, it might be easier to avoid a welds model.
+Here are two examples that read a value directly from a row.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::prelude::*;
+    let rows = client.fetch_rows("select 1 + 1 as total;", &amp;[]).await?;
+    let first_row = rows.first().unwrap();
+    let total: i32 = first_row.get("total")?;
+    println!("Total: {total}");
+<span class="boring">}</span></code></pre></pre>
+<p>You can read values by position in the row with <code>get_by_position</code>.
+Note it is zero based.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::prelude::*;
+    let rows = client.fetch_rows("select 1 + 2;", &amp;[]).await?;
+    let first_row = rows.first().unwrap();
+    let total: i32 = first_row.get_by_position(0)?;
+    println!("Total: {total}");
+<span class="boring">}</span></code></pre></pre>
+<h2 id="fetch-many"><a class="header" href="#fetch-many">Fetch Many</a></h2>
+<p>Last we have one more function that is used by welds internally for optimizations and you can use it too if you wish.
+<code>fetch_many</code> takes in a slice of <code>welds_connections::Fetch</code> (pairs of sql and params).</p>
+<p>This is specifically useful when you want to force multiple database calls onto the same connection in a database pool.
+There are a couple niche use cases you might want to do this, but most likely <code>fetch_rows</code> is what you want.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::prelude::*;
+    use welds::connections::Fetch;
+
+    let fetches = vec![
+        Fetch {
+            sql: "select 1",
+            params: &amp;[],
+        },
+        Fetch {
+            sql: "select 2",
+            params: &amp;[],
+        },
+    ];
+
+    let groups_of_rows = client.fetch_many(&amp;fetches).await?;
+    for rows in groups_of_rows {
+        // work with each individual set of rows
+    }
+
+<span class="boring">}</span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="migrations"><a class="header" href="#migrations">Migrations</a></h1>
 <p>Welds has built in migrations that offer a couple nice benefits SQL script style migrations do not.</p>
 <ol>

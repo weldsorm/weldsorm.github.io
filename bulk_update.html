@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Manual SQL - The Welds Book</title>
+        <title>Update - The Welds Book</title>
 
 
         <!-- Custom HTML head -->
@@ -152,59 +152,64 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="manual-sql"><a class="header" href="#manual-sql">Manual SQL</a></h1>
-<p>Custom SQL in WHERE Clauses
-Sometimes you need more flexibility than the standard .where_col method provides.
-For instance, you might want to perform a comparison between columns or use a database function in a way the query builder doesn’t directly support.
-Welds offers two helper methods <code>where_manual</code> and <code>where_manual2</code> that let you drop in custom SQL snippets in your WHERE clauses.</p>
-<h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
-<p>Welds typically handles SQL generation for you. However, in advanced scenarios, you might need direct control over part of the WHERE clause.</p>
-<p>The two functions covered here:</p>
-<ul>
-<li>where_manual</li>
-<li>where_manual2</li>
-</ul>
-<p>Both let you inject custom SQL strings. They differ slightly in how they reference columns and in how the snippet is anchored in the <code>WHERE</code> condition.</p>
-<p>Important Notes:</p>
-<ol>
-<li><em><strong>Use <code>?</code> for parameters.</strong></em> Welds will substitute them with the correct syntax (<code>$1</code>, <code>?</code>, or <code>@p1</code> depending on your database).</li>
-<li><em><strong>Use <code>$</code> as a placeholder for the table alias.</strong></em> At runtime, Welds replaces <code>$</code> with the actual table alias (e.g., <code>t1</code>).
-For instance, <code>$.price1</code> might become <code>t1.price1</code>.</li>
-</ol>
-<p>where_manual
-Description</p>
-<h2 id="where_manual"><a class="header" href="#where_manual">where_manual</a></h2>
-<p>where_manual adds custom SQL to the right side of a clause while anchoring it to a specific column in your model.
-Internally, it references the column you choose (in the lambda) and appends a user-supplied custom snippet.</p>
-<p>Usage:</p>
-<p>Imagine you have a table thing with two integer fields price1 and price2.
-You want to return rows where price1 is greater than price2 + 5.
-We can’t express this directly with standard comparisons, so we use where_manual:</p>
+                        <h1 id="bulk-update"><a class="header" href="#bulk-update">Bulk Update</a></h1>
+<p>Bulk update is a way to write SQL update statements with in welds.</p>
+<p>Bulk updates are accessible on <a href="./query.html">QueryBuilder&lt;T&gt;</a>. To start a bulk update you can call one <code>set</code> operations on your query.
+<code>set</code>, <code>set_col</code>, <code>set_null</code>, <code>set_manual</code></p>
+<br/>
+<h2 id="set--set_col"><a class="header" href="#set--set_col">set / set_col</a></h2>
+<p><code>set</code> and <code>set_col</code> are functionally identical.
+They just provide two coding flavors to the same underlying set operation.</p>
+<p>To use them start off with a Query just like you would to select your data.</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>let query = Thing::all().where_manual(|c| c.price1, " &gt; ($.price2 + ?) * ?", (1, 0.19) );
+</span>    let q = Product::where_col(|x| x.name.ilike("% - discontinued") );
 <span class="boring">}</span></code></pre></pre>
-<p>The params for where_manual are automatically converted from a tuple of whatever size.</p>
-<h2 id="where_manual2"><a class="header" href="#where_manual2">where_manual2</a></h2>
-<p>where_manual2 gives you full control over a custom SQL snippet in the WHERE clause without requiring an anchor column.
-This is useful for comparing multiple columns or more elaborate function calls.</p>
+<p>You can then call <code>set</code> or <code>set_col</code> to convert this query into a bulk update</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>let query = Thing::all().where_manual2("$.price1 + $.price2 &gt; ?", (33,) );
+</span>    let q = Product::where_col(|x| x.name.ilike("% - discontinued") );
+
+    q.set(|o| o.hidden, true).run(&amp;client).await?;
+    // or
+    q.set_col(|o| o.hidden.equal(true) ).run(&amp;client).await?;
+
 <span class="boring">}</span></code></pre></pre>
-<p>The params for where_manual2 are automatically converted from a tuple of whatever size.</p>
-<h2 id="other"><a class="header" href="#other">Other</a></h2>
-<p>There are a couple other <code>*_manual</code> functions in the QueryBuilder with the purpose of allowing small manual SQL snippets in the query.</p>
+<h2 id="set_null"><a class="header" href="#set_null">set_null</a></h2>
+<p><code>set_null</code> is just a short hand for <code>set(_, None)</code>.
+It is nice in that it makes your code cleaner to read.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    let q = Product::where_col(|x| x.name.ilike("% - discontinued") );
+
+    q.set(|o| o.hidden, true).run(&amp;client).await?;
+    // or
+    q.set_col(|o| o.hidden.equal(true) ).run(&amp;client).await?;
+
+<span class="boring">}</span></code></pre></pre>
+<h2 id="set_manual"><a class="header" href="#set_manual">set_manual</a></h2>
+<p>Sometimes you need to set a column based on another columns value; for example a calculation.
+In this scenario <code>set_manual</code> is what you are looking for.
+It functions in the same way as the other <a href="./query_sql.html">manual sql</a> calls</p>
+<p>To use it start off with a query,
+but this time you can insert a snippit of generic SQL to set the columns value.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    Order::all()
+        .set_manual(|x| x.sell_price, "$.sell_price + ?", (88,))
+        .run(&amp;client).await?;
+<span class="boring">}</span></code></pre></pre>
+<p>NOTE: use <code>?</code> for all database backends. It will be translated appropriately for the backends being called.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="query_include.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="bulk_insert.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="query_raw.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="bulk_delete.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -214,11 +219,11 @@ This is useful for comparing multiple columns or more elaborate function calls.<
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="query_include.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="bulk_insert.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="query_raw.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="bulk_delete.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

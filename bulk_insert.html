@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Manual SQL - The Welds Book</title>
+        <title>Insert - The Welds Book</title>
 
 
         <!-- Custom HTML head -->
@@ -152,59 +152,63 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="manual-sql"><a class="header" href="#manual-sql">Manual SQL</a></h1>
-<p>Custom SQL in WHERE Clauses
-Sometimes you need more flexibility than the standard .where_col method provides.
-For instance, you might want to perform a comparison between columns or use a database function in a way the query builder doesn’t directly support.
-Welds offers two helper methods <code>where_manual</code> and <code>where_manual2</code> that let you drop in custom SQL snippets in your WHERE clauses.</p>
-<h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
-<p>Welds typically handles SQL generation for you. However, in advanced scenarios, you might need direct control over part of the WHERE clause.</p>
-<p>The two functions covered here:</p>
-<ul>
-<li>where_manual</li>
-<li>where_manual2</li>
-</ul>
-<p>Both let you inject custom SQL strings. They differ slightly in how they reference columns and in how the snippet is anchored in the <code>WHERE</code> condition.</p>
-<p>Important Notes:</p>
+                        <h1 id="bulk-insert"><a class="header" href="#bulk-insert">Bulk Insert</a></h1>
+<p>When adding a lot of data into your database using a bulk insert can save a lot of time.
+This has to do with the way databases work, and is true at the database level.</p>
+<p>There are many different ways to "Bulk Insert" into a database, Welds tries to provide a common interface for the best option for each of its backends.</p>
+<h2 id="bulk_insert__"><a class="header" href="#bulk_insert__">bulk_insert(_,_)</a></h2>
+<p>The <code>bulk_insert</code> function is that common interface. It is pretty strait forward taking in a <a href="./fundamentals.html#weldsclient">Client</a> and a slice of <code>WeldsModels</code></p>
+<p>bulk_insert is not accessible via the query builder like other operations. You will need to include it with:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::query::insert::bulk_insert;
+<span class="boring">}</span></code></pre></pre>
+<p>First build a slice of data that you want to insert.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(WeldsModel)]
+#[welds(table = "products")]
+pub struct Product {
+    #[welds(primary_key)]
+    pub id: i32,
+    pub name: String,
+}
+<span class="boring">}</span></code></pre></pre>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    let mut products: Vec&lt;Product&gt; = Vec::default();
+    for i in (0..1000) {
+        products.push( Product {
+            id: 0,
+            name: format!("product #{}", i)
+        });
+    }
+<span class="boring">}</span></code></pre></pre>
+<br/>
+<p>Things to notice:</p>
 <ol>
-<li><em><strong>Use <code>?</code> for parameters.</strong></em> Welds will substitute them with the correct syntax (<code>$1</code>, <code>?</code>, or <code>@p1</code> depending on your database).</li>
-<li><em><strong>Use <code>$</code> as a placeholder for the table alias.</strong></em> At runtime, Welds replaces <code>$</code> with the actual table alias (e.g., <code>t1</code>).
-For instance, <code>$.price1</code> might become <code>t1.price1</code>.</li>
+<li>The column <code>id</code> is marked as a <code>primary_key</code>. Typically in welds
+if the primary_key field is <code>Default::default()</code> it is ignored when inserting.
+Here in Bulk insert the primary_key is <em><strong>ALWAYS</strong></em> ignored.
+If you want to insert a primary_key column, you will need to make a new model struct and NOT mark the primary_key as primary_key</li>
+<li>DbState is not used with bulk operations</li>
 </ol>
-<p>where_manual
-Description</p>
-<h2 id="where_manual"><a class="header" href="#where_manual">where_manual</a></h2>
-<p>where_manual adds custom SQL to the right side of a clause while anchoring it to a specific column in your model.
-Internally, it references the column you choose (in the lambda) and appends a user-supplied custom snippet.</p>
-<p>Usage:</p>
-<p>Imagine you have a table thing with two integer fields price1 and price2.
-You want to return rows where price1 is greater than price2 + 5.
-We can’t express this directly with standard comparisons, so we use where_manual:</p>
+<p>You can now insert your data with a call to <code>bulk_insert</code></p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>let query = Thing::all().where_manual(|c| c.price1, " &gt; ($.price2 + ?) * ?", (1, 0.19) );
+</span>    use welds::query::insert::bulk_insert;
+    bulk_insert(&amp;client, &amp;products).await?;
 <span class="boring">}</span></code></pre></pre>
-<p>The params for where_manual are automatically converted from a tuple of whatever size.</p>
-<h2 id="where_manual2"><a class="header" href="#where_manual2">where_manual2</a></h2>
-<p>where_manual2 gives you full control over a custom SQL snippet in the WHERE clause without requiring an anchor column.
-This is useful for comparing multiple columns or more elaborate function calls.</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let query = Thing::all().where_manual2("$.price1 + $.price2 &gt; ?", (33,) );
-<span class="boring">}</span></code></pre></pre>
-<p>The params for where_manual2 are automatically converted from a tuple of whatever size.</p>
-<h2 id="other"><a class="header" href="#other">Other</a></h2>
-<p>There are a couple other <code>*_manual</code> functions in the QueryBuilder with the purpose of allowing small manual SQL snippets in the query.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="query_include.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="bulk.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="query_raw.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="bulk_update.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -214,11 +218,11 @@ This is useful for comparing multiple columns or more elaborate function calls.<
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="query_include.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="bulk.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="query_raw.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="bulk_update.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

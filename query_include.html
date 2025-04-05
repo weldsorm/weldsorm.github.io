@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Manual SQL - The Welds Book</title>
+        <title>Include - The Welds Book</title>
 
 
         <!-- Custom HTML head -->
@@ -152,59 +152,131 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="manual-sql"><a class="header" href="#manual-sql">Manual SQL</a></h1>
-<p>Custom SQL in WHERE Clauses
-Sometimes you need more flexibility than the standard .where_col method provides.
-For instance, you might want to perform a comparison between columns or use a database function in a way the query builder doesn’t directly support.
-Welds offers two helper methods <code>where_manual</code> and <code>where_manual2</code> that let you drop in custom SQL snippets in your WHERE clauses.</p>
-<h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
-<p>Welds typically handles SQL generation for you. However, in advanced scenarios, you might need direct control over part of the WHERE clause.</p>
-<p>The two functions covered here:</p>
-<ul>
-<li>where_manual</li>
-<li>where_manual2</li>
-</ul>
-<p>Both let you inject custom SQL strings. They differ slightly in how they reference columns and in how the snippet is anchored in the <code>WHERE</code> condition.</p>
-<p>Important Notes:</p>
-<ol>
-<li><em><strong>Use <code>?</code> for parameters.</strong></em> Welds will substitute them with the correct syntax (<code>$1</code>, <code>?</code>, or <code>@p1</code> depending on your database).</li>
-<li><em><strong>Use <code>$</code> as a placeholder for the table alias.</strong></em> At runtime, Welds replaces <code>$</code> with the actual table alias (e.g., <code>t1</code>).
-For instance, <code>$.price1</code> might become <code>t1.price1</code>.</li>
-</ol>
-<p>where_manual
-Description</p>
-<h2 id="where_manual"><a class="header" href="#where_manual">where_manual</a></h2>
-<p>where_manual adds custom SQL to the right side of a clause while anchoring it to a specific column in your model.
-Internally, it references the column you choose (in the lambda) and appends a user-supplied custom snippet.</p>
-<p>Usage:</p>
-<p>Imagine you have a table thing with two integer fields price1 and price2.
-You want to return rows where price1 is greater than price2 + 5.
-We can’t express this directly with standard comparisons, so we use where_manual:</p>
+                        <h1 id="include"><a class="header" href="#include">Include</a></h1>
+<p><em>NOTE: when using include your data is read only</em></p>
+<br />
+<p>Fetch Models and their related objects.
+Models are wired up to their related objects for ease of access.</p>
+<p>Sometimes it's not the data that's important its the relationship.
+A good example of this is a <code>select</code> with <code>opgroup</code>.</p>
+<p>In the following Html snippit, we want both the <code>Food</code> model and the <code>FoodCategory</code> model.
+We need to iterate over <code>FoodCategory</code> and find the relevant <code>Food</code> model.</p>
+<p>In this example If we load our data with <code>include</code>, welds will automatically wire this up.</p>
+<br />
+<br />
+<label for="hr-select">Your favorite food</label>
+<select name="foods" id="hr-select">
+  <option value="">Choose a food</option>
+  <hr />
+  <optgroup label="Fruit">
+    <option value="apple">Apples</option>
+    <option value="banana">Bananas</option>
+    <option value="cherry">Cherries</option>
+    <option value="damson">Damsons</option>
+  </optgroup>
+  <hr />
+  <optgroup label="Vegetables">
+    <option value="artichoke">Artichokes</option>
+    <option value="broccoli">Broccoli</option>
+    <option value="cabbage">Cabbages</option>
+  </optgroup>
+  <hr />
+  <optgroup label="Meat">
+    <option value="beef">Beef</option>
+    <option value="chicken">Chicken</option>
+    <option value="pork">Pork</option>
+  </optgroup>
+  <hr />
+  <optgroup label="Fish">
+    <option value="cod">Cod</option>
+    <option value="haddock">Haddock</option>
+    <option value="salmon">Salmon</option>
+    <option value="turbot">Turbot</option>
+  </optgroup>
+</select>
+<pre><code class="language-html">&lt;label for="hr-select"&gt;Your favorite food&lt;/label&gt; &lt;br /&gt;
+
+&lt;select name="foods" id="hr-select"&gt;
+  &lt;option value=""&gt;Choose a food&lt;/option&gt;
+  &lt;hr /&gt;
+  &lt;optgroup label="Fruit"&gt;
+    &lt;option value="apple"&gt;Apples&lt;/option&gt;
+    &lt;option value="banana"&gt;Bananas&lt;/option&gt;
+    &lt;option value="cherry"&gt;Cherries&lt;/option&gt;
+    &lt;option value="damson"&gt;Damsons&lt;/option&gt;
+  &lt;/optgroup&gt;
+  &lt;hr /&gt;
+  &lt;optgroup label="Vegetables"&gt;
+    &lt;option value="artichoke"&gt;Artichokes&lt;/option&gt;
+    &lt;option value="broccoli"&gt;Broccoli&lt;/option&gt;
+    &lt;option value="cabbage"&gt;Cabbages&lt;/option&gt;
+  &lt;/optgroup&gt;
+  &lt;hr /&gt;
+  &lt;optgroup label="Meat"&gt;
+    &lt;option value="beef"&gt;Beef&lt;/option&gt;
+    &lt;option value="chicken"&gt;Chicken&lt;/option&gt;
+    &lt;option value="pork"&gt;Pork&lt;/option&gt;
+  &lt;/optgroup&gt;
+  &lt;hr /&gt;
+  &lt;optgroup label="Fish"&gt;
+    &lt;option value="cod"&gt;Cod&lt;/option&gt;
+    &lt;option value="haddock"&gt;Haddock&lt;/option&gt;
+    &lt;option value="salmon"&gt;Salmon&lt;/option&gt;
+    &lt;option value="turbot"&gt;Turbot&lt;/option&gt;
+  &lt;/optgroup&gt;
+&lt;/select&gt;
+</code></pre>
+<h2 id="loading-the-data"><a class="header" href="#loading-the-data">Loading the data</a></h2>
+<p>Let us assume we have the two models <code>Food</code> and <code>FoodCategory</code>.
+While you could select either model with the include and make it work,
+we are iterating over <code>FoodCategory</code> first. Because of this, it is a better model to start with.</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>let query = Thing::all().where_manual(|c| c.price1, " &gt; ($.price2 + ?) * ?", (1, 0.19) );
+</span>    use welds::dataset::DataSet;
+
+    let set: DataSet&lt;FoodCategory&gt; = FoodCategory::all()
+        .include(|c| c.food)
+        .run(client.as_ref())
+        .await?;
 <span class="boring">}</span></code></pre></pre>
-<p>The params for where_manual are automatically converted from a tuple of whatever size.</p>
-<h2 id="where_manual2"><a class="header" href="#where_manual2">where_manual2</a></h2>
-<p>where_manual2 gives you full control over a custom SQL snippet in the WHERE clause without requiring an anchor column.
-This is useful for comparing multiple columns or more elaborate function calls.</p>
+<p>This leads into the next question.
+What is a <code>DataSet</code> and how do I use it?</p>
+<h2 id="datasett"><a class="header" href="#datasett">DataSet&lt;T&gt;</a></h2>
+<p>Dataset is an iterate-able data collection like <code>Vec</code>.
+It exists to maintain and access the related data between the models.</p>
+<p>When you access a model from it, you get your model with a little extra.
+The accessed data is wrapped in a special accessor struct that knows how to lookup its related objects.</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>let query = Thing::all().where_manual2("$.price1 + $.price2 &gt; ?", (33,) );
+</span>    use welds::dataset::DataSet;
+
+    let set: DataSet&lt;FoodCategory&gt; = FoodCategory::all()
+        .include(|c| c.food)
+        .run(client.as_ref())
+        .await?;
+
+    for category in set.iter() {
+        println!("category: {}", category.name);
+
+        // access the food for this spisiffic category
+        let food_in_category = category.get(|x| x.food);
+        for food in &amp;food_in_category {
+            println!("food: {}", food.name);
+        }
+    }
+
+
 <span class="boring">}</span></code></pre></pre>
-<p>The params for where_manual2 are automatically converted from a tuple of whatever size.</p>
-<h2 id="other"><a class="header" href="#other">Other</a></h2>
-<p>There are a couple other <code>*_manual</code> functions in the QueryBuilder with the purpose of allowing small manual SQL snippets in the query.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="query_include.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="query_select.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="query_raw.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="query_sql.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -214,11 +286,11 @@ This is useful for comparing multiple columns or more elaborate function calls.<
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="query_include.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="query_select.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="query_raw.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="query_sql.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

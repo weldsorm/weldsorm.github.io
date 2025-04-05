@@ -988,6 +988,121 @@ let info_query = order_query
 
 let infos: Vec&lt;PlayerInfo&gt; = info_query.run(&amp;client).await?.collect_into()?;
 <span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="include"><a class="header" href="#include">Include</a></h1>
+<p><em>NOTE: when using include your data is read only</em></p>
+<br />
+<p>Fetch Models and their related objects.
+Models are wired up to their related objects for ease of access.</p>
+<p>Sometimes it's not the data that's important its the relationship.
+A good example of this is a <code>select</code> with <code>opgroup</code>.</p>
+<p>In the following Html snippit, we want both the <code>Food</code> model and the <code>FoodCategory</code> model.
+We need to iterate over <code>FoodCategory</code> and find the relevant <code>Food</code> model.</p>
+<p>In this example If we load our data with <code>include</code>, welds will automatically wire this up.</p>
+<br />
+<br />
+<label for="hr-select">Your favorite food</label>
+<select name="foods" id="hr-select">
+  <option value="">Choose a food</option>
+  <hr />
+  <optgroup label="Fruit">
+    <option value="apple">Apples</option>
+    <option value="banana">Bananas</option>
+    <option value="cherry">Cherries</option>
+    <option value="damson">Damsons</option>
+  </optgroup>
+  <hr />
+  <optgroup label="Vegetables">
+    <option value="artichoke">Artichokes</option>
+    <option value="broccoli">Broccoli</option>
+    <option value="cabbage">Cabbages</option>
+  </optgroup>
+  <hr />
+  <optgroup label="Meat">
+    <option value="beef">Beef</option>
+    <option value="chicken">Chicken</option>
+    <option value="pork">Pork</option>
+  </optgroup>
+  <hr />
+  <optgroup label="Fish">
+    <option value="cod">Cod</option>
+    <option value="haddock">Haddock</option>
+    <option value="salmon">Salmon</option>
+    <option value="turbot">Turbot</option>
+  </optgroup>
+</select>
+<pre><code class="language-html">&lt;label for="hr-select"&gt;Your favorite food&lt;/label&gt; &lt;br /&gt;
+
+&lt;select name="foods" id="hr-select"&gt;
+  &lt;option value=""&gt;Choose a food&lt;/option&gt;
+  &lt;hr /&gt;
+  &lt;optgroup label="Fruit"&gt;
+    &lt;option value="apple"&gt;Apples&lt;/option&gt;
+    &lt;option value="banana"&gt;Bananas&lt;/option&gt;
+    &lt;option value="cherry"&gt;Cherries&lt;/option&gt;
+    &lt;option value="damson"&gt;Damsons&lt;/option&gt;
+  &lt;/optgroup&gt;
+  &lt;hr /&gt;
+  &lt;optgroup label="Vegetables"&gt;
+    &lt;option value="artichoke"&gt;Artichokes&lt;/option&gt;
+    &lt;option value="broccoli"&gt;Broccoli&lt;/option&gt;
+    &lt;option value="cabbage"&gt;Cabbages&lt;/option&gt;
+  &lt;/optgroup&gt;
+  &lt;hr /&gt;
+  &lt;optgroup label="Meat"&gt;
+    &lt;option value="beef"&gt;Beef&lt;/option&gt;
+    &lt;option value="chicken"&gt;Chicken&lt;/option&gt;
+    &lt;option value="pork"&gt;Pork&lt;/option&gt;
+  &lt;/optgroup&gt;
+  &lt;hr /&gt;
+  &lt;optgroup label="Fish"&gt;
+    &lt;option value="cod"&gt;Cod&lt;/option&gt;
+    &lt;option value="haddock"&gt;Haddock&lt;/option&gt;
+    &lt;option value="salmon"&gt;Salmon&lt;/option&gt;
+    &lt;option value="turbot"&gt;Turbot&lt;/option&gt;
+  &lt;/optgroup&gt;
+&lt;/select&gt;
+</code></pre>
+<h2 id="loading-the-data"><a class="header" href="#loading-the-data">Loading the data</a></h2>
+<p>Let us assume we have the two models <code>Food</code> and <code>FoodCategory</code>.
+While you could select either model with the include and make it work,
+we are iterating over <code>FoodCategory</code> first. Because of this, it is a better model to start with.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::dataset::DataSet;
+
+    let set: DataSet&lt;FoodCategory&gt; = FoodCategory::all()
+        .include(|c| c.food)
+        .run(client.as_ref())
+        .await?;
+<span class="boring">}</span></code></pre></pre>
+<p>This leads into the next question.
+What is a <code>DataSet</code> and how do I use it?</p>
+<h2 id="datasett"><a class="header" href="#datasett">DataSet&lt;T&gt;</a></h2>
+<p>Dataset is an iterate-able data collection like <code>Vec</code>.
+It exists to maintain and access the related data between the models.</p>
+<p>When you access a model from it, you get your model with a little extra.
+The accessed data is wrapped in a special accessor struct that knows how to lookup its related objects.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::dataset::DataSet;
+
+    let set: DataSet&lt;FoodCategory&gt; = FoodCategory::all()
+        .include(|c| c.food)
+        .run(client.as_ref())
+        .await?;
+
+    for category in set.iter() {
+        println!("category: {}", category.name);
+
+        // access the food for this spisiffic category
+        let food_in_category = category.get(|x| x.food);
+        for food in &amp;food_in_category {
+            println!("food: {}", food.name);
+        }
+    }
+
+
+<span class="boring">}</span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="manual-sql"><a class="header" href="#manual-sql">Manual SQL</a></h1>
 <p>Custom SQL in WHERE Clauses
 Sometimes you need more flexibility than the standard .where_col method provides.
@@ -1142,6 +1257,119 @@ There are a couple niche use cases you might want to do this, but most likely <c
         // work with each individual set of rows
     }
 
+<span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="bulk"><a class="header" href="#bulk">Bulk</a></h1>
+<p>One truth across all databases is single database operations are slow.
+Using operations that effect multiple rows simultaneously is a much faster way of interacting with the database.</p>
+<p>This is unfortunate for ORMs since ORMs usually edit/create only one row at a time. <code>Welds</code> has a solution to this problem.</p>
+<p>With welds you get <a href="./bulk_insert.html">Bulk Insert</a>, <a href="./bulk_update.html">Bulk Update</a>, and <a href="./bulk_delete.html">Bulk Delete</a>.</p>
+<br/>
+<br/>
+<p><em><strong>NOTE: bulk operations do NOT trigger model hooks</strong></em></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="bulk-insert"><a class="header" href="#bulk-insert">Bulk Insert</a></h1>
+<p>When adding a lot of data into your database using a bulk insert can save a lot of time.
+This has to do with the way databases work, and is true at the database level.</p>
+<p>There are many different ways to "Bulk Insert" into a database, Welds tries to provide a common interface for the best option for each of its backends.</p>
+<h2 id="bulk_insert__"><a class="header" href="#bulk_insert__">bulk_insert(_,_)</a></h2>
+<p>The <code>bulk_insert</code> function is that common interface. It is pretty strait forward taking in a <a href="./fundamentals.html#weldsclient">Client</a> and a slice of <code>WeldsModels</code></p>
+<p>bulk_insert is not accessible via the query builder like other operations. You will need to include it with:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::query::insert::bulk_insert;
+<span class="boring">}</span></code></pre></pre>
+<p>First build a slice of data that you want to insert.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(WeldsModel)]
+#[welds(table = "products")]
+pub struct Product {
+    #[welds(primary_key)]
+    pub id: i32,
+    pub name: String,
+}
+<span class="boring">}</span></code></pre></pre>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    let mut products: Vec&lt;Product&gt; = Vec::default();
+    for i in (0..1000) {
+        products.push( Product {
+            id: 0,
+            name: format!("product #{}", i)
+        });
+    }
+<span class="boring">}</span></code></pre></pre>
+<br/>
+<p>Things to notice:</p>
+<ol>
+<li>The column <code>id</code> is marked as a <code>primary_key</code>. Typically in welds
+if the primary_key field is <code>Default::default()</code> it is ignored when inserting.
+Here in Bulk insert the primary_key is <em><strong>ALWAYS</strong></em> ignored.
+If you want to insert a primary_key column, you will need to make a new model struct and NOT mark the primary_key as primary_key</li>
+<li>DbState is not used with bulk operations</li>
+</ol>
+<p>You can now insert your data with a call to <code>bulk_insert</code></p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::query::insert::bulk_insert;
+    bulk_insert(&amp;client, &amp;products).await?;
+<span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="bulk-update"><a class="header" href="#bulk-update">Bulk Update</a></h1>
+<p>Bulk update is a way to write SQL update statements with in welds.</p>
+<p>Bulk updates are accessible on <a href="./query.html">QueryBuilder&lt;T&gt;</a>. To start a bulk update you can call one <code>set</code> operations on your query.
+<code>set</code>, <code>set_col</code>, <code>set_null</code>, <code>set_manual</code></p>
+<br/>
+<h2 id="set--set_col"><a class="header" href="#set--set_col">set / set_col</a></h2>
+<p><code>set</code> and <code>set_col</code> are functionally identical.
+They just provide two coding flavors to the same underlying set operation.</p>
+<p>To use them start off with a Query just like you would to select your data.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    let q = Product::where_col(|x| x.name.ilike("% - discontinued") );
+<span class="boring">}</span></code></pre></pre>
+<p>You can then call <code>set</code> or <code>set_col</code> to convert this query into a bulk update</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    let q = Product::where_col(|x| x.name.ilike("% - discontinued") );
+
+    q.set(|o| o.hidden, true).run(&amp;client).await?;
+    // or
+    q.set_col(|o| o.hidden.equal(true) ).run(&amp;client).await?;
+
+<span class="boring">}</span></code></pre></pre>
+<h2 id="set_null"><a class="header" href="#set_null">set_null</a></h2>
+<p><code>set_null</code> is just a short hand for <code>set(_, None)</code>.
+It is nice in that it makes your code cleaner to read.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    let q = Product::where_col(|x| x.name.ilike("% - discontinued") );
+
+    q.set(|o| o.hidden, true).run(&amp;client).await?;
+    // or
+    q.set_col(|o| o.hidden.equal(true) ).run(&amp;client).await?;
+
+<span class="boring">}</span></code></pre></pre>
+<h2 id="set_manual"><a class="header" href="#set_manual">set_manual</a></h2>
+<p>Sometimes you need to set a column based on another columns value; for example a calculation.
+In this scenario <code>set_manual</code> is what you are looking for.
+It functions in the same way as the other <a href="./query_sql.html">manual sql</a> calls</p>
+<p>To use it start off with a query,
+but this time you can insert a snippit of generic SQL to set the columns value.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    Order::all()
+        .set_manual(|x| x.sell_price, "$.sell_price + ?", (88,))
+        .run(&amp;client).await?;
+<span class="boring">}</span></code></pre></pre>
+<p>NOTE: use <code>?</code> for all database backends. It will be translated appropriately for the backends being called.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="bulk-delete"><a class="header" href="#bulk-delete">Bulk Delete</a></h1>
+<p>Bulk delete is a way to write SQL delete statements with in welds.
+Bulk delete is accessed on <a href="./query.html">QueryBuilder&lt;T&gt;</a> via <code>delete</code>.</p>
+<p>To use bulk delete call delete with the client.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    Product::all()
+        .where_col(|x| x.name.ilike("% - discontinued") )
+        .delete(&amp;client).await?;
 <span class="boring">}</span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="migrations"><a class="header" href="#migrations">Migrations</a></h1>
 <p>Welds has built in migrations that offer a couple nice benefits SQL script style migrations do not.</p>

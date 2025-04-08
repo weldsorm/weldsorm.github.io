@@ -126,6 +126,12 @@
                         <a href="print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
+                        <a href="https://github.com/weldsorm/book" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/weldsorm/book/edit/main/src/src/fundamentals.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
 
                     </div>
                 </div>
@@ -159,6 +165,7 @@
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
+<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="fundamentals"><a class="header" href="#fundamentals">Fundamentals</a></h1>
 <p>Before diving to deep into Welds, there are a couple constructs you should be aware of.
 These are the four most common things you will see when interacting with Welds.</p>
@@ -180,7 +187,7 @@ These are the four most common things you will see when interacting with Welds.<
 <h2 id="weldsdbstatet"><a class="header" href="#weldsdbstatet">welds::DbState&lt;T&gt;</a></h2>
 <p>This is a wrapper around your model. While you might not use this struct directly, it is what is returned to you from a database query. It works very similar to <code>std::sync::MutexGuard</code>, transparently giving you access to the model inside.
 It is used by welds to keep track of the changes you make to your model so Welds can create or update it in the database.</p>
-<p>If you are finished with Welds and just want your vanilla model back, you can call <code>into_inner</code> or <code>into_vm</code> to get to the inner object.</p>
+<p>If you are finished with Welds and just want your vanilla model back, you can call <code>into_inner()</code> or <code>into_vm()</code> to get to the inner object, or if you have a vec of state objects you can call <code>into_inners()</code>.</p>
 <h2 id="weldsmodel"><a class="header" href="#weldsmodel">WeldsModel</a></h2>
 <p>The Attribute you will add to your models. <a href="models.html">More information can be found here</a></p>
 

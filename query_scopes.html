@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Custom Select (Columns &amp; Joins) - The Welds Book</title>
+        <title>Scopes - The Welds Book</title>
 
 
         <!-- Custom HTML head -->
@@ -132,7 +132,7 @@
                         <a href="https://github.com/weldsorm/book" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                        <a href="https://github.com/weldsorm/book/edit/main/src/src/query_select.md" title="Suggest an edit" aria-label="Suggest an edit">
+                        <a href="https://github.com/weldsorm/book/edit/main/src/src/query_scopes.md" title="Suggest an edit" aria-label="Suggest an edit">
                             <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
 
@@ -168,76 +168,52 @@
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<h1 id="custom-select"><a class="header" href="#custom-select">Custom Select</a></h1>
-<p>So far in the book, our models have been One-to-One matches with the underlying tables.
-But what do we do if we want a subset of columns, or maybe data across tables.</p>
-<p>Introducing <code>select</code> and <code>select_as</code></p>
-<p><code>select</code> and <code>select_as</code> allow for the writing of queries that are disconnected from the concept of the underlying table.</p>
-<p>This means:</p>
-<ul>
-<li>They can span multiple tables via joins</li>
-<li>They can rename columns</li>
-<li>They can pick only the parts of the data you care about.</li>
-</ul>
+<h1 id="scopes"><a class="header" href="#scopes">Scopes</a></h1>
+<p>Welds supports name scope to help abstract away complicated queries.</p>
 <h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
-<p>A <em>Custom Select</em> involves two basic steps.</p>
-<ol>
-<li>Define a struct that represents the data you want out of the database.</li>
-<li>Write a Query selecting parts from your existing models to extract that data.</li>
-</ol>
-<p>Lets assume we want this data.</p>
+<p>Often when working with a data in a database there is a need to re-use filters.
+This can be useful to keep complicated logic in a single location.
+Welds provide a nice mechanism to write re-usually snippits of queries.</p>
+<h2 id="how-to-write-a-scope"><a class="header" href="#how-to-write-a-scope">How to write a scope</a></h2>
+<p>To write a scope in welds start off with a trait defining your scope.</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>#[derive(WeldsModel)]
-struct PlayerInfo {
-    pub name: String,
+</span>pub trait ProductScopes {
+    fn ready_to_sell(self) -&gt; Self;
 }
 <span class="boring">}</span></code></pre></pre>
-<p>Note: This model is not connected to a table and there isn't a table that looks like this.</p>
-<h2 id="start-querying-single-column"><a class="header" href="#start-querying-single-column">Start Querying (single column)</a></h2>
-<p>To get just the Player name we can start querying off of our existing Player Model that is wired up to the table.
-Once we have a basic query we can select out only the columns we care about.</p>
-<p>A query with a call to <code>select</code> returns generic rows, so we must call <code>collect_into()</code>
-to collect them into our <code>PlayerInfo</code> struct.</p>
+<p>Next implement your trait for the querybuilder and your model.</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>let player_query = Player::where_col(|p| p.goals.gt(3) );
-let info_query = player_query.select(|p| p.name );
-let infos: Vec&lt;PlayerInfo&gt; = info_query.run(&amp;client).await?.collect_into()?;
-<span class="boring">}</span></code></pre></pre>
-<h2 id="with-more-data-joining-table"><a class="header" href="#with-more-data-joining-table">With more data (Joining table)</a></h2>
-<p>What about if we want a list of player names, and their team names.
-Lets first start by updating our output struct.</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>#[derive(WeldsModel)]
-struct PlayerInfo {
-    pub player_name: String,
-    pub team_name: String,
+</span>impl ProductScopes for QueryBuilder&lt;Product&gt; {
+    fn ready_to_sell(self) -&gt; Self {
+        self.where_col(|p| p.active.not_equal(false))
+            .where_col(|p| p.price.not_equal(None))
+            .where_col(|p| p.description.not_equal(None))
+    }
 }
 <span class="boring">}</span></code></pre></pre>
-<p>This time around both models have a column called name. so we will need to rename them with <code>select_as</code>.
-We can then start querying like before, but this time we will Join using our relationships we defined on the models <code>Player</code> and <code>Team</code>.</p>
+<h2 id="how-to-use-a-scope"><a class="header" href="#how-to-use-a-scope">How to use a scope</a></h2>
+<p>Once written, your scopes are available any time you write a query as long as your trait is included in the module.</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>let player_query = Player::where_col(|p| p.goals.gt(3) );
+</span>// top of file
+use ProductScopes;
 
-let info_query = order_query
-    .select_as(|x| x.name, "player_name")
-    .join( |p| p.team, Team::select_as(|p| p.name, "team_name") );
 
-let infos: Vec&lt;PlayerInfo&gt; = info_query.run(&amp;client).await?.collect_into()?;
+
+let data = Product::all().ready_to_sell().run(&amp;client).await?;
 <span class="boring">}</span></code></pre></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="query_advanced.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="query_raw.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="group_by.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="bulk.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -247,11 +223,11 @@ let infos: Vec&lt;PlayerInfo&gt; = info_query.run(&amp;client).await?.collect_in
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="query_advanced.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="query_raw.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="group_by.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="bulk.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

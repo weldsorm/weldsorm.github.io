@@ -32,10 +32,11 @@
         <!-- Custom theme stylesheets -->
 
 
-        <!-- Provide site root to javascript -->
+        <!-- Provide site root and default themes to javascript -->
         <script>
-            var path_to_root = "";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc.js"></script>
@@ -45,8 +46,8 @@
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                var theme = localStorage.getItem('mdbook-theme');
-                var sidebar = localStorage.getItem('mdbook-sidebar');
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -60,7 +61,8 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            var theme;
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -73,8 +75,8 @@
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var sidebar = null;
-            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -110,6 +112,7 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
@@ -163,7 +166,6 @@
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="the-welds-orm-programming-book"><a class="header" href="#the-welds-orm-programming-book">The Welds ORM Programming Book</a></h1>
 <p>by Lex Childs, with contributions from the Rust Community</p>
 <p>This version of the text is for the latest stable version of the Welds ORM library.</p>
@@ -197,7 +199,6 @@ Contributions to this book are very welcome and appreciated. Clarifying a single
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
 <ul>
 <li><a href="./setup.html">Project Setup</a></li>
@@ -211,7 +212,6 @@ Contributions to this book are very welcome and appreciated. Clarifying a single
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="project-setup"><a class="header" href="#project-setup">Project Setup</a></h1>
 <p>For the most part there isn't really much extra you need to do over a normal crate.
 It is recommended to install Welds with a simple cargo add command, but you will need to pick your database backends you want to support.
@@ -252,7 +252,6 @@ cargo add welds-connections --features="mssql,sqlite,mssql-chrono"
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="fundamentals"><a class="header" href="#fundamentals">Fundamentals</a></h1>
 <p>Before diving to deep into Welds, there are a couple constructs you should be aware of.
 These are the four most common things you will see when interacting with Welds.</p>
@@ -284,7 +283,6 @@ It is used by welds to keep track of the changes you make to your model so Welds
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="connections"><a class="header" href="#connections">Connections</a></h1>
 <p>Connections in welds are done using the crate <code>welds-connections</code>. This crate is re-exported out of welds for ease of use.
 <code>welds-connections</code> is a common interface that allows for talking to different databases in a common way.</p>
@@ -326,7 +324,44 @@ let client = welds::connections::connect(connection_string).await?;
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
+<h1 id="tools"><a class="header" href="#tools">Tools</a></h1>
+<p>Welds has a sister project <a href="https://crates.io/crates/gumbo">Gumbo</a> that is a command line tool (CLI) that can be extremely useful when writing welds code.</p>
+<p>Reasons you might be interested in this CLI:</p>
+<ul>
+<li>basic project setup</li>
+<li>migration generation</li>
+<li>model generation</li>
+<li>code generation from database tables</li>
+</ul>
+<h2 id="gumbo-setup"><a class="header" href="#gumbo-setup">Gumbo setup</a></h2>
+<pre><code class="language-bash">cargo install gumbo
+
+# to use the database related commands, set the ENV `DATABASE_URL`
+export DATABASE_URL=sqlite://./dev.sqlite
+</code></pre>
+<p>You can initialize a basic empty shell of a welds project with the <code>init</code> command</p>
+<h2 id="project-setup-1"><a class="header" href="#project-setup-1">Project Setup</a></h2>
+<pre><code class="language-bash">gumbo init --welds-only project_name
+</code></pre>
+<h2 id="migration-generation"><a class="header" href="#migration-generation">Migration Generation</a></h2>
+<pre><code>gumbo generate migration ...
+</code></pre>
+<h2 id="code-generation"><a class="header" href="#code-generation">Code Generation</a></h2>
+<p>To generate models from an existing database, Make sure that you have the ENV VAR <code>DATABASE_URL</code> set in your shell.
+You can then generate models individually, or all at once. This command can be re-ran on your models after generation.
+Only the fields on your welds struct will be altered</p>
+<pre><code class="language-bash"># single table
+gumbo db model-from-table table_name
+# or all tables
+gumbo db model-from-table -- --all-tables
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><script async src="https://www.googletagmanager.com/gtag/js?id=G-W76JJB1RVJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-W76JJB1RVJ');
+</script>
 <h1 id="models"><a class="header" href="#models">Models</a></h1>
 <p>Models are the heart of Welds. All queries are made off of the models you define.
 Additionally models are used to de-serialize rows from the database,
@@ -359,7 +394,6 @@ pub struct Pet {
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="attributes"><a class="header" href="#attributes">Attributes</a></h1>
 <p>This is a list of Attributes you can add to your welds model to help control how it is wired up.</p>
 <h2 id="struct-level-attributes"><a class="header" href="#struct-level-attributes">Struct Level Attributes</a></h2>
@@ -426,7 +460,6 @@ This tells welds that this field has nothing to do with the database and should 
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="whats-added-to-your-model"><a class="header" href="#whats-added-to-your-model">Whats Added To your Model</a></h1>
 <p>When you use the Welds ORM derive on your struct, it automatically provides several methods to help you create, retrieve, query, and manage data. Here’s an overview of those methods:</p>
 <br/>
@@ -567,7 +600,6 @@ let data: Vec&lt;IdAndName&gt; = query.run(client.as_ref()).await?.collect_into(
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="create-update-and-delete"><a class="header" href="#create-update-and-delete">Create, Update, And Delete</a></h1>
 <p>When you get data back from the database it is typically wrapped in DbState like this.</p>
 <pre><code>let mut pet: DbState&lt;Pet&gt; = Pet::find_by_id(42).run(client.as_ref()).await?;
@@ -678,7 +710,6 @@ let pet: Vec&lt;Arc&lt;Pet&gt;&gt; = pets.into_vms();
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="model-relationships"><a class="header" href="#model-relationships">Model Relationships</a></h1>
 <p>Welds supports several different types of relationships between models. By specifying these relationships, you can let the ORM know how your models are connected in the database.
 This is used when making advanced queries across tables and across table updates</p>
@@ -694,10 +725,6 @@ This is used when making advanced queries across tables and across table updates
 </span><span class="boring">fn main() {
 </span>#[welds(BelongsTo(team, Team, "team_id"))]
 <span class="boring">}</span></code></pre></pre>
-<br/>
-<br/>
-<br/>
-<br/>
 <br/>
 <h3 id="1-belongsto"><a class="header" href="#1-belongsto">1. BelongsTo</a></h3>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -726,10 +753,6 @@ pub struct Player {
 <pre><code>The Player model has a team_id field referencing a Team record’s primary key.
 </code></pre>
 <br/>
-<br/>
-<br/>
-<br/>
-<br/>
 <h3 id="2-hasmany"><a class="header" href="#2-hasmany">2. HasMany</a></h3>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -756,9 +779,43 @@ pub struct Team {
 <pre><code>The Team model can have many Player records, each storing team_id.
 </code></pre>
 <br/>
-<br/>
-<br/>
-<br/>
+<h3 id="3-hasone"><a class="header" href="#3-hasone">3. HasOne</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[welds(HasOne(image, Image, "user_id"))]
+<span class="boring">}</span></code></pre></pre>
+<p>Use HasOne when the association is singular and the other model holds the foreign key.</p>
+<ul>
+<li><strong>Name</strong> (first parameter): The name of the relationship (e.g., image).</li>
+<li><strong>Target model</strong> (second parameter): The child model (e.g., Image).</li>
+<li><strong>Foreign key</strong> (third parameter): The column on the child model that references this model’s primary key (e.g., "user_id").</li>
+</ul>
+<p>Example use case where a User has one image:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(welds::WeldsModel)]
+#[welds(table = "users")]
+#[welds(HasOne(image, Image, "user_id"))]
+pub struct User {
+    #[welds(primary_key)]
+    pub id: i32,
+    pub name: String,
+}
+<span class="boring">}</span></code></pre></pre>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(welds::WeldsModel)]
+#[welds(table = "images")]
+#[welds(BelongsTo(user, User, "user_id"))]
+pub struct Image {
+    #[welds(primary_key)]
+    pub id: i32,
+    pub user_id: i32,
+    pub url: String,
+}
+<span class="boring">}</span></code></pre></pre>
+<pre><code>A User has one Image, the Image BelongsTo the User and holds the foreign key.
+</code></pre>
 <br/>
 <div style="break-before: page; page-break-before: always;"></div><script async src="https://www.googletagmanager.com/gtag/js?id=G-W76JJB1RVJ"></script>
 <script>
@@ -767,7 +824,6 @@ pub struct Team {
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="hooks-1"><a class="header" href="#hooks-1">Hooks</a></h1>
 <p>Welds allows you to attach functions (called "hooks") that run at specific points in the lifecycle of a model's interaction with the database.
 These hooks enable you to perform actions such as validation, logging, or side-effectful tasks (e.g., sending notifications) before or after a model is created, updated, or deleted.</p>
@@ -847,7 +903,6 @@ If a "before" hook fails and returns an error, Welds will stop the associated op
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="query"><a class="header" href="#query">Query</a></h1>
 <p>In Welds a query or <code>QueryBuilder&lt;T&gt;</code> is an un-executed action to be preformed in the database. It is the root; the starting point for interactions with the database.</p>
 <p>Bulk operations and single column selects are both accessible from a Query, so it really is the first place you should turn.</p>
@@ -859,7 +914,6 @@ If a "before" hook fails and returns an error, Welds will stop the associated op
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="basic---single-table-query"><a class="header" href="#basic---single-table-query">Basic - (single table query)</a></h1>
 <h2 id="overview-2"><a class="header" href="#overview-2">Overview</a></h2>
 <p>Welds uses a builder-like API for constructing queries against your database models.
@@ -970,7 +1024,6 @@ This is particularly useful for pagination.</p>
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="advanced---cross-table-query"><a class="header" href="#advanced---cross-table-query">Advanced - (cross table query)</a></h1>
 <p><em><em><strong>Not</strong></em> data from multiple tables. See <a href="./query_select.html">Custom Select</a> for that</em></p>
 <p>Requirements: the following section requires that you have relationships setup on your models.</p>
@@ -1050,7 +1103,6 @@ You can do this with where_relation</p>
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="custom-select"><a class="header" href="#custom-select">Custom Select</a></h1>
 <p>So far in the book, our models have been One-to-One matches with the underlying tables.
 But what do we do if we want a subset of columns, or maybe data across tables.</p>
@@ -1118,7 +1170,46 @@ let infos: Vec&lt;PlayerInfo&gt; = info_query.run(&amp;client).await?.collect_in
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
+<h1 id="aggregate-functions-group-by"><a class="header" href="#aggregate-functions-group-by">Aggregate Functions (Group By)</a></h1>
+<p>Aggregate Functions are a continuation of <a href="./query_select.html">Custom Select</a>. It is recommended to have a understanding of custom selects before continuing.</p>
+<h2 id="introduction-1"><a class="header" href="#introduction-1">Introduction</a></h2>
+<p>When working with custom selects, it is possible to use welds to create queries that result in <code>group by</code> statements.
+These are intended to be used with custom output structs just like custom selects.</p>
+<p>Normal group by requirements apply with welds group bys.
+If you are using a group by, all columns must be either aggregated or in the group by.</p>
+<h2 id="basic-example"><a class="header" href="#basic-example">Basic example</a></h2>
+<p>Lets start with a simple example. Counting.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Struct for collecting group by output
+#[derive(Debug, WeldsModel)]
+pub struct PeopleCount {
+    pub name: String,
+    pub count: i32,
+}
+<span class="boring">}</span></code></pre></pre>
+<p>To count the people by their names, typically you would select the names grouping by the name column.
+Something like this in SQL</p>
+<pre><code class="language-sql">SELECT count(id), name FROM people GROUP BY name
+</code></pre>
+<p>This can be written in welds in a similar way</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    let query = Player::all()
+        .select(|p| p.name)
+        .select_count(|p| p.id, "count")
+        .group_by(|p| p.name);
+    let data: Vec&lt;PeopleCount&gt; = query.run(&amp;client).await?.collect_into()?;
+<span class="boring">}</span></code></pre></pre>
+<p>All the aggregate functions in welds follow the pattern <code>select_*( lambda, output_name)</code></p>
+<p>You are required to include a name for your output data column because welds populates your struct by column name not index.</p>
+<div style="break-before: page; page-break-before: always;"></div><script async src="https://www.googletagmanager.com/gtag/js?id=G-W76JJB1RVJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-W76JJB1RVJ');
+</script>
 <h1 id="include"><a class="header" href="#include">Include</a></h1>
 <p><em>NOTE: when using include your data is read only</em></p>
 <br />
@@ -1234,6 +1325,18 @@ The accessed data is wrapped in a special accessor struct that knows how to look
 
 
 <span class="boring">}</span></code></pre></pre>
+<h2 id="filter-sub-models"><a class="header" href="#filter-sub-models">Filter sub models</a></h2>
+<p>If you are interested in fetching a subset of the included models, this can be achieved using <code>include_where</code>.
+<code>include_where</code> works just like include but an included filter is applied to the child model.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    use welds::dataset::DataSet;
+
+    let set: DataSet&lt;FoodCategory&gt; = FoodCategory::all()
+        .include_where(|c| t.food, Food::where_col(|f| f.deleted.equal(false)))
+        .run(client.as_ref())
+        .await?;
+<span class="boring">}</span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><script async src="https://www.googletagmanager.com/gtag/js?id=G-W76JJB1RVJ"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -1241,13 +1344,12 @@ The accessed data is wrapped in a special accessor struct that knows how to look
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="manual-sql"><a class="header" href="#manual-sql">Manual SQL</a></h1>
 <p>Custom SQL in WHERE Clauses
 Sometimes you need more flexibility than the standard .where_col method provides.
 For instance, you might want to perform a comparison between columns or use a database function in a way the query builder doesn’t directly support.
 Welds offers two helper methods <code>where_manual</code> and <code>where_manual2</code> that let you drop in custom SQL snippets in your WHERE clauses.</p>
-<h2 id="introduction-1"><a class="header" href="#introduction-1">Introduction</a></h2>
+<h2 id="introduction-2"><a class="header" href="#introduction-2">Introduction</a></h2>
 <p>Welds typically handles SQL generation for you. However, in advanced scenarios, you might need direct control over part of the WHERE clause.</p>
 <p>The two functions covered here:</p>
 <ul>
@@ -1292,7 +1394,6 @@ This is useful for comparing multiple columns or more elaborate function calls.<
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="raw-sql"><a class="header" href="#raw-sql">Raw SQL</a></h1>
 <p>Welds has the mindset that you should be able to drop down to SQL if you need it.
 We provide several ways to use SQL snipits in your queries, but this chapter is how to bypass the QueryBuilder altogether.</p>
@@ -1412,7 +1513,49 @@ There are a couple niche use cases you might want to do this, but most likely <c
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
+<h1 id="scopes"><a class="header" href="#scopes">Scopes</a></h1>
+<p>Welds supports name scope to help abstract away complicated queries.</p>
+<h2 id="introduction-3"><a class="header" href="#introduction-3">Introduction</a></h2>
+<p>Often when working with a data in a database there is a need to re-use filters.
+This can be useful to keep complicated logic in a single location.
+Welds provide a nice mechanism to write re-usually snippits of queries.</p>
+<h2 id="how-to-write-a-scope"><a class="header" href="#how-to-write-a-scope">How to write a scope</a></h2>
+<p>To write a scope in welds start off with a trait defining your scope.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait ProductScopes {
+    fn ready_to_sell(self) -&gt; Self;
+}
+<span class="boring">}</span></code></pre></pre>
+<p>Next implement your trait for the querybuilder and your model.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl ProductScopes for QueryBuilder&lt;Product&gt; {
+    fn ready_to_sell(self) -&gt; Self {
+        self.where_col(|p| p.active.not_equal(false))
+            .where_col(|p| p.price.not_equal(None))
+            .where_col(|p| p.description.not_equal(None))
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<h2 id="how-to-use-a-scope"><a class="header" href="#how-to-use-a-scope">How to use a scope</a></h2>
+<p>Once written, your scopes are available any time you write a query as long as your trait is included in the module.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// top of file
+use ProductScopes;
+
+
+
+let data = Product::all().ready_to_sell().run(&amp;client).await?;
+<span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><script async src="https://www.googletagmanager.com/gtag/js?id=G-W76JJB1RVJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-W76JJB1RVJ');
+</script>
 <h1 id="bulk"><a class="header" href="#bulk">Bulk</a></h1>
 <p>One truth across all databases is single database operations are slow.
 Using operations that effect multiple rows simultaneously is a much faster way of interacting with the database.</p>
@@ -1428,7 +1571,6 @@ Using operations that effect multiple rows simultaneously is a much faster way o
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="bulk-insert"><a class="header" href="#bulk-insert">Bulk Insert</a></h1>
 <p>When adding a lot of data into your database using a bulk insert can save a lot of time.
 This has to do with the way databases work, and is true at the database level.</p>
@@ -1483,7 +1625,6 @@ If you want to insert a primary_key column, you will need to make a new model st
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="bulk-update"><a class="header" href="#bulk-update">Bulk Update</a></h1>
 <p>Bulk update is a way to write SQL update statements with in welds.</p>
 <p>Bulk updates are accessible on <a href="./query.html">QueryBuilder&lt;T&gt;</a>. To start a bulk update you can call one <code>set</code> operations on your query.
@@ -1537,7 +1678,6 @@ but this time you can insert a snippit of generic SQL to set the columns value.<
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="bulk-delete"><a class="header" href="#bulk-delete">Bulk Delete</a></h1>
 <p>Bulk delete is a way to write SQL delete statements with in welds.
 Bulk delete is accessed on <a href="./query.html">QueryBuilder&lt;T&gt;</a> via <code>delete</code>.</p>
@@ -1555,7 +1695,6 @@ Bulk delete is accessed on <a href="./query.html">QueryBuilder&lt;T&gt;</a> via 
   gtag('js', new Date());
   gtag('config', 'G-W76JJB1RVJ');
 </script>
-<img src="https://weldsorm.com/assets/logo.webp" />
 <h1 id="migrations"><a class="header" href="#migrations">Migrations</a></h1>
 <p>Welds has built in migrations that offer a couple nice benefits SQL script style migrations do not.</p>
 <ol>

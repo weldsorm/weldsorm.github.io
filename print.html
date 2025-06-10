@@ -42,6 +42,17 @@
         <script src="toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -119,7 +130,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -1609,7 +1620,7 @@ pub struct Product {
 <li>The column <code>id</code> is marked as a <code>primary_key</code>. Typically in welds
 if the primary_key field is <code>Default::default()</code> it is ignored when inserting.
 Here in Bulk insert the primary_key is <em><strong>ALWAYS</strong></em> ignored.
-If you want to insert a primary_key column, you will need to make a new model struct and NOT mark the primary_key as primary_key</li>
+If you want to insert a primary_key column, you can use the method: <code>welds::query::insert::bulk_insert_with_ids</code></li>
 <li>DbState is not used with bulk operations</li>
 </ol>
 <p>You can now insert your data with a call to <code>bulk_insert</code></p>
@@ -1814,8 +1825,8 @@ use welds::migrations::prelude::*;
 use welds::migrations::Manual;
 
 fn step(state: &amp;TableState) -&gt; Result&lt;MigrationStep&gt; {
-    let m = Manual::up("DROP TABLE dogs")
-        .down("CREATE TABLE dogs ( id SERIAL PRIMARY KEY )");
+    let m = Manual::up("CREATE TABLE dogs ( id SERIAL PRIMARY KEY )")
+        .down("DROP TABLE dogs");
     Ok(MigrationStep::new("m20250210064357_manual_dogs", m))
 }
 <span class="boring">}</span></code></pre></pre>

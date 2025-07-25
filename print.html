@@ -459,7 +459,7 @@ If a model is a one-to-one, or a subset of a table, add this on to it so that Yo
 </code></pre>
 <p>Add This to a field when the field's name doesn't match the name in the database</p>
 <h3 id="ignore"><a class="header" href="#ignore">Ignore</a></h3>
-<pre><code>//  #[welds(ignore)]
+<pre><code>#[welds(ignore)]
 </code></pre>
 <p>Sometimes you need to have a little extra state or other stuff attached to your model.
 This tells welds that this field has nothing to do with the database and should be ignored.</p>
@@ -931,12 +931,14 @@ If a "before" hook fails and returns an error, Welds will stop the associated op
 These queries are strongly typed, ensuring compile-time safety and making it clearer which columns and constraints are being used.
 You can chain methods such as where_col(), order_by_asc(), and others to build increasingly complex queries without sacrificing readability.</p>
 <h2 id="executing-queries"><a class="header" href="#executing-queries">Executing Queries</a></h2>
-<p>Welds queries don't run in the database until you call <code>run</code> or <code>count</code>.
+<p>Welds queries don't run in the database until you call <code>run</code>, <code>count</code> or <code>fetch_one</code>.
 These calls build the required SQL, execute it in the database, and returns the corresponding data.</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>let row_count = Model::all().count(client.as_ref()).await?;
 let models = Model::all().run(client.as_ref()).await?;
+// short hand for `.limit(1).run(..)` returning a single model or WeldError is not found
+let model = Model::all().fetch_one(client.as_ref()).await?; 
 <span class="boring">}</span></code></pre></pre>
 <br/>
 <br/>

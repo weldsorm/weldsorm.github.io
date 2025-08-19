@@ -417,7 +417,7 @@ pub struct Pet {
 <span class="boring">}</span></code></pre></pre>
 <p>Link a model to a table.<br />
 If a model is a one-to-one, or a subset of a table, add this on to it so that You can query directly off of the model.</p>
-<h3 id="readonly"><a class="header" href="#readonly">Readonly</a></h3>
+<h3 id="readonly-model-level"><a class="header" href="#readonly-model-level">Readonly (model level)</a></h3>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>#[welds(readonly)]
@@ -458,6 +458,13 @@ If a model is a one-to-one, or a subset of a table, add this on to it so that Yo
 <pre><code>#[welds(rename="new_name")]
 </code></pre>
 <p>Add This to a field when the field's name doesn't match the name in the database</p>
+<h3 id="readonly-field-level"><a class="header" href="#readonly-field-level">Readonly (field level)</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[welds(readonly)]
+<span class="boring">}</span></code></pre></pre>
+<p>Mark a field as being readonly. This prevents a single field from being written back to the database.
+The field is read from the database but not written. Useful for calculated columns.</p>
 <h3 id="ignore"><a class="header" href="#ignore">Ignore</a></h3>
 <pre><code>#[welds(ignore)]
 </code></pre>

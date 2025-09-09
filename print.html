@@ -37,6 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc.js"></script>
@@ -93,10 +94,13 @@
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
+                sidebar_toggle.checked = false;
             }
-            sidebar_toggle.checked = sidebar === 'visible';
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
@@ -150,7 +154,12 @@
 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -835,6 +844,44 @@ pub struct Image {
 <pre><code>A User has one Image, the Image BelongsTo the User and holds the foreign key.
 </code></pre>
 <br/>
+<h3 id="4-manualrelationship"><a class="header" href="#4-manualrelationship">4. ManualRelationship</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[welds(ManualRelationship(image, Image, "uid", "user_id"))]
+<span class="boring">}</span></code></pre></pre>
+<p>Sometimes it is necessary to have full control over the relationship.
+A good example of this is if you want to join where both sides don't use the primary key.
+If you need to control the key on both sides, <code>ManualRelationship</code> is what you are looking for.</p>
+<ul>
+<li><strong>Name</strong> (first parameter): The name of the relationship (e.g., image).</li>
+<li><strong>Target model</strong> (second parameter): The model to link to (e.g., Image).</li>
+<li><strong>Self Key</strong> (third parameter): The column on your side <code>self</code> of the relationship.</li>
+<li><strong>Other Key</strong> (fourth parameter): The column on the other side of the relationship. (column on other model)</li>
+</ul>
+<p>Example use case:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(welds::WeldsModel)]
+#[welds(table = "users")]
+#[welds(ManualRelationship(images, Image, "uid", "user_id"))]
+pub struct User {
+    #[welds(primary_key)]
+    pub uid: i32,
+    pub name: String,
+}
+<span class="boring">}</span></code></pre></pre>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(welds::WeldsModel)]
+#[welds(table = "images")]
+#[welds(ManualRelationship(user, User, "user_id", "uid"))]
+pub struct Image {
+    #[welds(primary_key)]
+    pub id: i32,
+    pub user_id: i32,
+    pub url: String,
+}
+<span class="boring">}</span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><script async src="https://www.googletagmanager.com/gtag/js?id=G-W76JJB1RVJ"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -1638,6 +1685,15 @@ If you want to insert a primary_key column, you can use the method: <code>welds:
 </span>    use welds::query::insert::bulk_insert;
     bulk_insert(&amp;client, &amp;products).await?;
 <span class="boring">}</span></code></pre></pre>
+<h1 id="bulk-insert---advanced-options"><a class="header" href="#bulk-insert---advanced-options">Bulk Insert - Advanced Options</a></h1>
+<p>There are a couple extra, options for inserting into databases. They allow for overriding of the tablename.
+These can be extremely useful when importing data or using a temp table.
+They don't contain "rust unsafe" code, but are labeled as unsafe because they to NOT protect from SQL injection.
+It goes without saying, don't expose the tablename to a user.</p>
+<p><code>bulk_insert_override_tablename_unsafe</code>
+and
+<code>bulk_insert_with_ids_override_tablename_unsafe</code></p>
+<p>These two function work just like there safe counterparts, but allow manual setting of the tablename.</p>
 <div style="break-before: page; page-break-before: always;"></div><script async src="https://www.googletagmanager.com/gtag/js?id=G-W76JJB1RVJ"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -1880,6 +1936,7 @@ fn step(state: &amp;TableState) -&gt; Result&lt;MigrationStep&gt; {
             window.setTimeout(window.print, 100);
         });
         </script>
+
 
     </div>
     </body>
